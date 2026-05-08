@@ -800,18 +800,44 @@
   <script>
     (function() {
       var params = new URLSearchParams(window.location.search);
-      if (params.get('signup') === 'success') {
-        var form = document.getElementById('signup-form');
-        var meta = document.querySelector('.form-meta');
-        var success = document.getElementById('signup-success');
-        if (form) form.style.display = 'none';
-        if (meta) meta.style.display = 'none';
-        if (success) success.hidden = false;
-        // Optionally scroll the success message into view on mobile
-        if (success && window.innerWidth < 900) {
-          success.scrollIntoView({behavior: 'smooth', block: 'center'});
-        }
+      if (params.get('signup') !== 'success') return;
+
+      var form = document.getElementById('signup-form');
+      var meta = document.querySelector('.form-meta');
+      var success = document.getElementById('signup-success');
+      if (!success) return;
+
+      // Show success state, hide form
+      if (form) form.style.display = 'none';
+      if (meta) meta.style.display = 'none';
+      success.hidden = false;
+
+      // Strip ?signup=success so refresh lands on clean form
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
+
+      // Scroll into view on mobile
+      if (window.innerWidth < 900) {
+        success.scrollIntoView({behavior: 'smooth', block: 'center'});
+      }
+
+      // After 8 seconds, fade success out and bring the form back
+      setTimeout(function() {
+        success.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        success.style.opacity = '0';
+        success.style.transform = 'translateY(-6px)';
+        setTimeout(function() {
+          success.hidden = true;
+          success.style.opacity = '';
+          success.style.transform = '';
+          success.style.transition = '';
+          if (form) form.style.display = '';
+          if (meta) meta.style.display = '';
+          var input = form ? form.querySelector('input[type=email]') : null;
+          if (input) input.value = '';
+        }, 500);
+      }, 8000);
     })();
   </script>
 </body>
