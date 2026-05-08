@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Helm — Portfolio management for solo and small RIAs</title>
+<meta name="description" content="Stop running your firm from a spreadsheet. Get back to your clients. Rebalancing, TLH alerts, drift reports, and tax-aware cash management for solo and small RIAs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Helm brand palette */
+    --navy:        #234C6A;
+    --navy-deep:   #19384F;
+    --teal:        #3FBFB8;
+    --teal-deep:   #2DA39B;
+    --aqua:        #C5EFEE;
+    --aqua-light:  #E8F8F7;
+
+    /* Page neutrals */
+    --bg:          #f6f3ec;       /* warm cream, complements logo */
+    --bg-2:        #ece7dc;
+    --paper:       #fdfaf3;
+    --ink:         var(--navy-deep);
+    --ink-2:       #3a4f5e;
+    --ink-dim:     #6f7e8b;
+    --line:        #d8d2c2;
+    --gold:        #d4a747;       /* warm secondary accent */
+    --green:       #4a7c59;
+    --red:         #b85450;
+
+    /* Aliases for old names so we don't have to refactor every reference */
+    --accent:      var(--navy);
+    --accent-2:    var(--teal);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--ink);
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  .serif { font-family: 'DM Serif Display', Georgia, serif; }
+
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.45;
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E");
+    mix-blend-mode: multiply;
+  }
+
+  .backdrop {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 800px 600px at 80% 0%, rgba(63,191,184,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 700px 500px at 0% 100%, rgba(35,76,106,0.12) 0%, transparent 60%);
+  }
+
+  .wrap {
+    position: relative; z-index: 2;
+    max-width: 1280px; margin: 0 auto;
+    padding: 56px 48px 48px;
+    min-height: 100vh;
+    display: grid; grid-template-rows: auto 1fr auto auto; gap: 56px;
+  }
+
+  /* ---------- HEADER + LOGO MARK ---------- */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .logo {
+    display: flex; align-items: center; gap: 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 22px; font-weight: 500;
+    letter-spacing: 0.18em;
+    color: var(--navy);
+    text-transform: uppercase;
+  }
+  .wheel {
+    width: 48px; height: 48px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wheel svg { width: 100%; height: 100%; display: block; }
+
+  .nav-meta {
+    font-size: 13px; color: var(--ink-dim);
+    display: flex; gap: 24px; align-items: center;
+  }
+  .status-dot {
+    display: inline-block; width: 7px; height: 7px;
+    background: var(--teal); border-radius: 50%; margin-right: 8px;
+    animation: pulse 2.5s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(63,191,184,0.6);
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 72px;
+    align-items: center;
+  }
+
+  .eyebrow {
+    font-size: 13px; color: var(--teal-deep);
+    text-transform: uppercase; letter-spacing: 0.16em;
+    margin-bottom: 28px; font-weight: 600;
+    display: flex; align-items: center; gap: 12px;
+    animation: fade 0.5s ease-out 0.1s both;
+  }
+  .eyebrow::before {
+    content: ''; display: inline-block;
+    width: 28px; height: 1px; background: var(--teal-deep);
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400;
+    font-size: clamp(44px, 5vw, 68px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 28px;
+    color: var(--navy-deep);
+    animation: fade 0.6s ease-out 0.2s both;
+    text-wrap: balance;
+  }
+  h1 em { font-style: italic; color: var(--teal-deep); }
+
+  h1 .strike {
+    position: relative; display: inline-block;
+    color: var(--ink-dim); font-style: italic;
+  }
+  h1 .strike::after {
+    content: ''; position: absolute; left: -3%; right: -3%; top: 54%;
+    height: 5px; background: var(--teal);
+    transform: rotate(-2deg);
+    border-radius: 2px;
+    opacity: 0.85;
+  }
+
+  .lede {
+    font-size: 18px; line-height: 1.6; color: var(--ink-2);
+    max-width: 500px; margin-bottom: 36px;
+    animation: fade 0.6s ease-out 0.3s both;
+  }
+  .lede .filename {
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 15px;
+    background: var(--aqua-light);
+    padding: 2px 8px; border-radius: 4px;
+    color: var(--navy);
+    border: 1px solid var(--aqua);
+  }
+
+  .features {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 14px 28px;
+    margin-bottom: 40px;
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    animation: fade 0.6s ease-out 0.35s both;
+  }
+  .feat {
+    font-size: 14px; color: var(--ink-2);
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 500;
+  }
+  .feat-icon {
+    width: 24px; height: 24px;
+    background: var(--aqua-light); border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--navy); font-size: 12px; font-weight: 700;
+  }
+
+  .signup {
+    display: flex; max-width: 460px; gap: 0;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    padding: 6px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    animation: fade 0.6s ease-out 0.4s both;
+  }
+  .signup:focus-within {
+    border-color: var(--teal);
+    box-shadow: 0 4px 20px rgba(63,191,184,0.18);
+  }
+  .signup input {
+    flex: 1; background: transparent; border: 0;
+    padding: 12px 20px; font-size: 15px;
+    font-family: inherit; color: var(--ink); outline: none;
+  }
+  .signup input::placeholder { color: var(--ink-dim); }
+  .signup button {
+    background: var(--navy); color: var(--paper); border: 0;
+    padding: 12px 24px; font-family: inherit;
+    font-size: 14px; font-weight: 500; border-radius: 100px;
+    cursor: pointer; transition: background 0.15s ease;
+    white-space: nowrap;
+  }
+  .signup button:hover { background: var(--navy-deep); }
+  .form-meta {
+    margin-top: 14px; font-size: 13px; color: var(--ink-dim);
+    animation: fade 0.6s ease-out 0.5s both;
+  }
+
+  /* Founder card */
+  .founder-label {
+    margin-top: 28px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: var(--ink-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 600;
+    animation: fade 0.6s ease-out 0.5s both;
+  }
+  .founder-line {
+    margin-top: 0;
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 20px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    max-width: 540px;
+    animation: fade 0.6s ease-out 0.55s both;
+  }
+  .founder-avatar {
+    width: 52px; height: 52px; flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--navy); color: var(--paper);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Serif Display', serif; font-size: 20px;
+    font-style: italic;
+    box-shadow: 0 2px 10px rgba(35,76,106,0.25);
+    background-size: cover;
+    background-position: center;
+    border: 2px solid var(--paper);
+    outline: 1px solid rgba(35,76,106,0.15);
+  }
+  .founder-avatar-photo {
+    background-image: url('data:image/jpeg;base64,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');
+  }
+  .founder-text {
+    font-size: 13px; line-height: 1.5; color: var(--ink-2);
+    flex: 1;
+  }
+  .founder-quote {
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 15px;
+    line-height: 1.4;
+    color: var(--navy-deep);
+    margin-bottom: 6px;
+  }
+  .founder-byline {
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .founder-byline strong { color: var(--ink-2); font-weight: 600; }
+  .founder-byline .credentials {
+    color: var(--teal-deep); font-weight: 600;
+  }
+
+  /* ---------- VISUAL ---------- */
+  .visual {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    animation: fade 0.8s ease-out 0.4s both;
+  }
+
+  .sheet-ghost {
+    position: absolute;
+    top: 4%; left: 0; width: 70%;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    transform: rotate(-4deg);
+    box-shadow: 0 12px 32px rgba(35,76,106,0.08);
+    opacity: 0.5;
+    overflow: hidden;
+    filter: saturate(0.6);
+  }
+  .sheet-bar {
+    background: var(--bg-2); padding: 7px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex; gap: 5px; align-items: center;
+  }
+  .sheet-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .sheet-title {
+    font-size: 10px; color: var(--ink-dim);
+    margin-left: 10px; font-style: italic;
+  }
+  .sheet-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    font-size: 10px;
+  }
+  .sheet-grid div {
+    padding: 6px 9px;
+    border-right: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    color: var(--ink-2);
+    overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
+  .sheet-grid div.h { background: var(--bg-2); font-weight: 600; color: var(--ink); }
+  .sheet-grid div.err { background: #f9e8e6; color: var(--red); font-weight: 600; }
+
+  .app-card {
+    position: absolute;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 24px 50px rgba(35,76,106,0.12);
+  }
+  .app-card-1 {
+    top: 22%; right: 0; width: 65%;
+    transform: rotate(2deg);
+    --r: 2deg;
+    animation: float 8s ease-in-out infinite;
+  }
+  .app-card-2 {
+    bottom: 28%; right: 12%; width: 60%;
+    transform: rotate(-1.5deg);
+    --r: -1.5deg;
+    background: var(--navy);
+    color: var(--paper);
+    border-color: var(--navy);
+    animation: float 9s ease-in-out infinite reverse;
+  }
+  .app-card-3 {
+    bottom: 0; left: 4%; width: 56%;
+    transform: rotate(1.5deg);
+    --r: 1.5deg;
+    background: var(--teal);
+    color: var(--navy-deep);
+    border-color: var(--teal);
+    animation: float 10s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: rotate(var(--r)) translateY(0); }
+    50% { transform: rotate(var(--r)) translateY(-7px); }
+  }
+
+  .card-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--ink-dim); margin-bottom: 14px; font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .app-card-2 .card-label { color: rgba(253,250,243,0.75); }
+  .app-card-3 .card-label { color: rgba(25,56,79,0.7); }
+  .badge {
+    background: var(--teal); color: var(--navy-deep);
+    padding: 3px 10px; border-radius: 100px; font-size: 9px;
+    font-weight: 700; letter-spacing: 0.08em;
+  }
+  .app-card-2 .badge { background: var(--teal); color: var(--navy-deep); }
+  .app-card-3 .badge { background: var(--navy-deep); color: var(--teal); }
+
+  .card-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .app-card-2 .card-row { border-bottom-color: rgba(253,250,243,0.15); }
+  .app-card-3 .card-row { border-bottom-color: rgba(25,56,79,0.15); }
+  .card-row:last-child { border-bottom: 0; }
+  .row-name { color: var(--ink-2); }
+  .app-card-2 .row-name { color: rgba(253,250,243,0.8); }
+  .app-card-3 .row-name { color: rgba(25,56,79,0.75); }
+  .row-val { font-weight: 600; font-size: 13px; }
+  .delta-up { color: var(--green); }
+  .delta-down { color: var(--red); }
+  .app-card-2 .delta-up, .app-card-2 .delta-down { color: var(--paper); }
+  .app-card-3 .delta-up, .app-card-3 .delta-down { color: var(--navy-deep); }
+
+  .big-num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 48px; font-style: italic;
+    line-height: 1; margin: 8px 0 4px;
+  }
+  .big-num-sub {
+    font-size: 11px; opacity: 0.85;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer {
+    display: flex; justify-content: space-between; align-items: end;
+    padding-top: 24px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--ink-dim);
+  }
+  footer a { color: var(--ink-dim); text-decoration: none; transition: color 0.15s ease; }
+  footer a:hover { color: var(--teal-deep); }
+  .footer-mark {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 18px; font-weight: 500; color: var(--navy);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .footer-col { display: flex; flex-direction: column; gap: 6px; }
+  .footer-col .legal {
+    font-size: 12px; color: var(--ink-dim); line-height: 1.5;
+  }
+  .footer-col .legal strong { color: var(--ink-2); font-weight: 600; }
+
+  /* About / Why section */
+  .about {
+    border-top: 1px solid var(--line);
+    padding-top: 56px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .about h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px; line-height: 1.15;
+    letter-spacing: -0.015em;
+    color: var(--navy-deep);
+    margin-bottom: 16px;
+    font-weight: 400;
+  }
+  .about h2 em { font-style: italic; color: var(--teal-deep); }
+  .about p {
+    font-size: 15px; line-height: 1.65; color: var(--ink-2);
+    max-width: 480px;
+  }
+  .about-eyebrow {
+    font-size: 11px; color: var(--teal-deep);
+    text-transform: uppercase; letter-spacing: 0.16em;
+    margin-bottom: 12px; font-weight: 600;
+  }
+  .compliance-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    margin-top: 24px;
+    font-size: 12px; color: var(--ink-dim);
+  }
+  .compliance-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 100px;
+  }
+  .compliance-pill::before {
+    content: ''; width: 6px; height: 6px;
+    background: var(--teal); border-radius: 50%;
+  }
+
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid;
+    line-height: 1;
+  }
+  .status-rebal {
+    color: #d05050;
+    background: rgba(208,80,80,0.08);
+    border-color: rgba(208,80,80,0.35);
+  }
+  .status-range {
+    color: var(--green);
+    background: rgba(74,124,89,0.10);
+    border-color: rgba(74,124,89,0.35);
+  }
+  .status-drift {
+    color: #b8893a;
+    background: rgba(184,137,58,0.10);
+    border-color: rgba(184,137,58,0.40);
+  }
+
+
+  .wash-alert {
+    display: inline-flex; align-items: center;
+    margin-top: 14px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: rgba(255,255,255,0.12);
+    color: #ffd76b;
+    border: 1px solid rgba(255,215,107,0.35);
+    line-height: 1;
+  }
+
+
+  .automation-note {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: -24px 0 32px;
+    padding: 12px 14px;
+    background: rgba(63,191,184,0.08);
+    border: 1px solid rgba(63,191,184,0.25);
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    max-width: 540px;
+    animation: fade 0.6s ease-out 0.38s both;
+  }
+  .automation-icon {
+    color: var(--teal-deep);
+    font-weight: 700;
+    flex-shrink: 0;
+    line-height: 1.5;
+  }
+
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 24px 24px 32px; gap: 32px; }
+    .hero { grid-template-columns: 1fr; gap: 40px; }
+    .visual { aspect-ratio: 4 / 4; }
+    h1 { font-size: clamp(42px, 11vw, 60px); }
+    .about { grid-template-columns: 1fr; gap: 32px; padding-top: 32px; }
+    footer { flex-direction: column; align-items: start; gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="backdrop"></div>
+
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="wheel"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" aria-label="Helm logo">
+  <!-- 8 outer handle nubs -->
+  <g fill="#234C6A">
+    <circle cx="50" cy="9" r="3.5"/>
+    <circle cx="50" cy="91" r="3.5"/>
+    <circle cx="9" cy="50" r="3.5"/>
+    <circle cx="91" cy="50" r="3.5"/>
+    <circle cx="20.9" cy="20.9" r="3.5"/>
+    <circle cx="79.1" cy="20.9" r="3.5"/>
+    <circle cx="20.9" cy="79.1" r="3.5"/>
+    <circle cx="79.1" cy="79.1" r="3.5"/>
+  </g>
+  <!-- handle bars connecting nubs to outer ring -->
+  <g stroke="#234C6A" stroke-width="3.2" stroke-linecap="round" fill="none">
+    <line x1="50" y1="12.5" x2="50" y2="22"/>
+    <line x1="50" y1="78" x2="50" y2="87.5"/>
+    <line x1="12.5" y1="50" x2="22" y2="50"/>
+    <line x1="78" y1="50" x2="87.5" y2="50"/>
+    <line x1="23.4" y1="23.4" x2="29.7" y2="29.7"/>
+    <line x1="70.3" y1="29.7" x2="76.6" y2="23.4"/>
+    <line x1="23.4" y1="76.6" x2="29.7" y2="70.3"/>
+    <line x1="70.3" y1="70.3" x2="76.6" y2="76.6"/>
+  </g>
+  <!-- outer ring -->
+  <circle cx="50" cy="50" r="28" fill="#234C6A"/>
+  <circle cx="50" cy="50" r="24" fill="none"/>
+  <!-- 8 wheel segments inside the ring -->
+  <g>
+    <!-- top-left: pale aqua -->
+    <path d="M 50 50 L 50 26 A 24 24 0 0 0 33.03 33.03 Z" fill="#E8F8F7"/>
+    <!-- top-right: pale aqua -->
+    <path d="M 50 50 L 50 26 A 24 24 0 0 1 66.97 33.03 Z" fill="#C5EFEE"/>
+    <!-- right: teal -->
+    <path d="M 50 50 L 66.97 33.03 A 24 24 0 0 1 74 50 Z" fill="#3FBFB8"/>
+    <!-- bottom-right: teal -->
+    <path d="M 50 50 L 74 50 A 24 24 0 0 1 66.97 66.97 Z" fill="#3FBFB8"/>
+    <!-- bottom-right-2: teal -->
+    <path d="M 50 50 L 66.97 66.97 A 24 24 0 0 1 50 74 Z" fill="#3FBFB8"/>
+    <!-- bottom-left: teal -->
+    <path d="M 50 50 L 50 74 A 24 24 0 0 1 33.03 66.97 Z" fill="#3FBFB8"/>
+    <!-- left: teal -->
+    <path d="M 50 50 L 33.03 66.97 A 24 24 0 0 1 26 50 Z" fill="#3FBFB8"/>
+    <!-- top-left-2: aqua -->
+    <path d="M 50 50 L 26 50 A 24 24 0 0 1 33.03 33.03 Z" fill="#C5EFEE"/>
+  </g>
+  <!-- spoke lines -->
+  <g stroke="#234C6A" stroke-width="2" stroke-linecap="round">
+    <line x1="50" y1="26" x2="50" y2="74"/>
+    <line x1="26" y1="50" x2="74" y2="50"/>
+    <line x1="33.03" y1="33.03" x2="66.97" y2="66.97"/>
+    <line x1="66.97" y1="33.03" x2="33.03" y2="66.97"/>
+  </g>
+  <!-- center hub -->
+  <circle cx="50" cy="50" r="3.5" fill="#234C6A"/>
+</svg></div>
+      <span>Helm</span>
+    </div>
+    <div class="nav-meta">
+      <span><span class="status-dot"></span>Building Now</span>
+      <span>Coming 2026</span>
+    </div>
+  </header>
+
+  <section class="hero">
+
+    <div>
+      <div class="eyebrow">Designed for solo and small RIAs · Coming soon</div>
+      <h1>
+        Stop running your firm from a <span class="strike">spreadsheet.</span> <em>Get back to your clients.</em>
+      </h1>
+      <p class="lede">
+        Helm replaces the <span class="filename">rebalance_v17_FINAL.xlsx</span> chaos with real software. Rebalancing, TLH alerts, drift reports, and tax-aware cash management — built for solo and small RIAs.
+      </p>
+
+      <div class="features">
+        <div class="feat"><span class="feat-icon">↻</span>Rebalancer</div>
+        <div class="feat"><span class="feat-icon">−</span>TLH Alerts</div>
+        <div class="feat"><span class="feat-icon">◔</span>Drift Reports</div>
+        <div class="feat"><span class="feat-icon">⚏</span>Watchlist Alerts</div>
+        <div class="feat"><span class="feat-icon">$</span>Cash Sweep</div>
+        <div class="feat"><span class="feat-icon">→</span>Distribution Planner</div>
+      </div>
+      <div class="automation-note">
+        <span class="automation-icon">✱</span>
+        Watchlist alerts, drift reports, and TLH opportunities — automated and emailed to you.
+      </div>
+
+      <form class="signup" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+        <input type="email" name="email" placeholder="you@yourfirm.com" required>
+        <button type="submit">Get early access</button>
+      </form>
+      <div class="form-meta">No spam. One email when we launch.</div>
+
+      <div class="founder-label">Helm is designed by:</div>
+      <div class="founder-line">
+        <div class="founder-avatar founder-avatar-photo" aria-label="Allen Mueller"></div>
+        <div class="founder-text">
+          <div class="founder-quote">&ldquo;Helm is the tool I always wanted. I didn't want to pay $10,000+ annually for an overkill solution.&rdquo;</div>
+          <div class="founder-byline">
+            <strong>Allen Mueller</strong>, <span class="credentials">CFA, CFP®</span> — Founder of 7 Saturdays Financial
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="visual">
+      <div class="sheet-ghost">
+        <div class="sheet-bar">
+          <div class="sheet-dot" style="background:#ff6058;"></div>
+          <div class="sheet-dot" style="background:#ffbd2e;"></div>
+          <div class="sheet-dot" style="background:#28ca42;"></div>
+          <div class="sheet-title">rebalance_v17_FINAL_USE_THIS.xlsx</div>
+        </div>
+        <div class="sheet-grid">
+          <div class="h">Acct</div><div class="h">VTI</div><div class="h">AVUV</div><div class="h">VXUS</div><div class="h">BND</div>
+          <div>HND-001</div><div>62%</div><div>11%</div><div>17%</div><div>10%</div>
+          <div>HND-002</div><div>58%</div><div>12%</div><div class="err">#REF!</div><div>11%</div>
+          <div>WLT-IRA</div><div>71%</div><div>9%</div><div>13%</div><div>7%</div>
+          <div>WLT-Tax</div><div>64%</div><div>10%</div><div class="err">#N/A</div><div>9%</div>
+        </div>
+      </div>
+
+      <div class="app-card app-card-1">
+        <div class="card-label">
+          <span>Drift Report · Today</span>
+          <span class="badge">3 ACCOUNTS</span>
+        </div>
+        <div class="card-row"><span class="row-name">Client 1</span><span class="status-pill status-rebal">■ Needs Rebal</span></div>
+        <div class="card-row"><span class="row-name">Client 2</span><span class="status-pill status-range">● In Range</span></div>
+        <div class="card-row"><span class="row-name">Client 3</span><span class="status-pill status-drift">▲ Drifting</span></div>
+      </div>
+
+      <div class="app-card app-card-2">
+        <div class="card-label">
+          <span>TLH Opportunity</span>
+          <span class="badge">NEW</span>
+        </div>
+        <div class="big-num">$8,420</div>
+        <div class="big-num-sub">harvestable · 4 lots</div>
+        <div class="wash-alert">⚠ Wash sale alert</div>
+      </div>
+
+      <div class="app-card app-card-3">
+        <div class="card-label">
+          <span>Cash Raise</span>
+        </div>
+        <div class="card-row"><span class="row-name">Distribution</span><span class="row-val">$42,500</span></div>
+        <div class="card-row"><span class="row-name">From MMF</span><span class="row-val">$18,200</span></div>
+        <div class="card-row"><span class="row-name">ST Gain</span><span class="row-val delta-up">$0</span></div>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="about">
+    <div>
+      <div class="about-eyebrow">Why we're building this</div>
+      <h2>Solo and small RIAs deserve the same caliber of tools the <em>big firms have.</em></h2>
+    </div>
+    <div>
+      <p>
+        For a decade, the choice has been pay enterprise prices for software designed for a fifty-person operations team — or stitch your practice together with spreadsheets, custodian portals, and willpower.
+      </p>
+      <p style="margin-top: 16px;">
+        Helm is the third option: serious portfolio management software, priced for solo and small RIAs, built by someone who runs one.
+      </p>
+      <div class="compliance-row">
+        <span class="compliance-pill">Security &amp; compliance first</span>
+        <span class="compliance-pill">SOC 2 on the roadmap</span>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-col">
+      <span class="footer-mark">Helm</span>
+      <span class="legal">
+        Dallas, Texas<br>
+        © 2026 · Built by an RIA, for RIAs
+      </span>
+    </div>
+    <div class="footer-col" style="align-items: end; text-align: right;">
+      <a href="mailto:hello@helmtools.com">hello@helmtools.com</a>
+      <span class="legal">
+        Helm is a software company.<br>
+        Not an investment adviser.
+      </span>
+    </div>
+  </footer>
+
+</div>
+
+</body>
+</html>
